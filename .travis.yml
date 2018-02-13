@@ -15,4 +15,4 @@ before_install:
 - chmod +x "${HOME}/bin/dep"
 
 script:
-- make
+- make images

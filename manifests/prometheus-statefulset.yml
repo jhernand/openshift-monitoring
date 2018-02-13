@@ -14,20 +14,31 @@
 # limitations under the License.
 #
 
-#
-# This deployment creates a simple instance of Prometheus, controlled by the
-# launcher that takes care of updating the configuration and reloading it when
-# then alerting rules are added to the system.
-#
-
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  labels:
+    app: prometheus
+spec:
+  ports:
+  - port: 9090
+    name: collector
+  - port: 9093
+    name: manager
+  clusterIP: None
+  selector:
+    app: prometheus
+---
 apiVersion: apps/v1beta1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: prometheus
 spec:
   selector:
     matchLabels:
       app: prometheus
+  serviceName: prometheus
   replicas: 1
   template:
     metadata:
@@ -35,28 +46,28 @@ spec:
         app: prometheus
     spec:
       serviceAccountName: prometheus
+      volumes:
+      - name: data
+        emptyDir: {}
       containers:
-
-      # Metrics collector, managed by the launcher:
       - name: collector
         image: openshift-monitoring/metrics-collector:0.0.0
         ports:
         - containerPort: 9090
-        securityContext:
-          runAsUser: 1000000000 # Must match the UID in the image.
-
-      # Alert manager:
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/monitoring
       - name: manager
         image: openshift-monitoring/alert-manager:0.0.0
         ports:
         - containerPort: 9093
-        securityContext:
-          runAsUser: 1000000000 # Must match the UID in the image.
-
-      # Alert publisher:
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/monitoring
       - name: publisher
         image: openshift-monitoring/alert-publisher:0.0.0
         ports:
         - containerPort: 9099
-        securityContext:
-          runAsUser: 1000000000 # Must match the UID in the image.
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/monitoring

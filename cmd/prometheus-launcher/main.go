@@ -37,7 +37,8 @@ var (
 	kubeAddress string
 	kubeConfig  string
 	childBinary string
-	childConfig string
+	configFile  string
+	rulesFile   string
 )
 
 func main() {
@@ -65,10 +66,16 @@ func main() {
 		"The location of the Prometheus binary.",
 	)
 	flag.StringVar(
-		&childConfig,
-		"child-config",
+		&configFile,
+		"config-file",
 		"/etc/monitoring/prometheus.yml",
 		"The location of the Prometheus configuration file.",
+	)
+	flag.StringVar(
+		&rulesFile,
+		"rules-file",
+		"/etc/monitoring/alerting.rules",
+		"The location of the Prometheus alerting rules file.",
 	)
 
 	// Parse the command line:
@@ -120,7 +127,8 @@ func main() {
 	// Build the launcher:
 	launcher, err := NewLauncherBuilder().
 		Binary(childBinary).
-		Config(childConfig).
+		ConfigFile(configFile).
+		RulesFile(rulesFile).
 		Args(childArgs).
 		Client(client).
 		InformerFactory(informerFactory).

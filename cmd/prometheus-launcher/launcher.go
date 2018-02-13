@@ -22,7 +22,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -48,7 +47,8 @@ type LauncherBuilder struct {
 
 	// The locations of the Prometheus binary and configuration files.
 	childBinary string
-	childConfig string
+	configFile  string
+	rulesFile   string
 
 	// The arguments to pass to the child process.
 	childArgs []string
@@ -77,7 +77,8 @@ type Launcher struct {
 
 	// The locations of the Prometheus binary and configuration files.
 	childBinary string
-	childConfig string
+	configFile  string
+	rulesFile   string
 
 	// The arguments to pass to the child process.
 	childArgs []string
@@ -90,8 +91,6 @@ type Launcher struct {
 //
 func NewLauncherBuilder() *LauncherBuilder {
 	b := new(LauncherBuilder)
-	b.childBinary = "prometheus"
-	b.childConfig = "prometheus.yaml"
 	return b
 }
 
@@ -116,10 +115,17 @@ func (b *LauncherBuilder) Binary(location string) *LauncherBuilder {
 	return b
 }
 
-// Config sets the location of the child configuration file.
+// ConfigFile sets the location of the main Prometheus configuration file.
 //
-func (b *LauncherBuilder) Config(location string) *LauncherBuilder {
-	b.childConfig = location
+func (b *LauncherBuilder) ConfigFile(location string) *LauncherBuilder {
+	b.configFile = location
+	return b
+}
+
+// RulesFile sets the location of the Prometheus alerting rules file.
+//
+func (b *LauncherBuilder) RulesFile(location string) *LauncherBuilder {
+	b.rulesFile = location
 	return b
 }
 
@@ -141,8 +147,9 @@ func (b *LauncherBuilder) Build() (l *Launcher, err error) {
 
 	// Save the details of the child:
 	l.childBinary = b.childBinary
-	l.childConfig = b.childConfig
 	l.childArgs = b.childArgs
+	l.configFile = b.configFile
+	l.rulesFile = b.rulesFile
 
 	// Initialize the map where we store the latest resource version seen for each alerting rule:
 	l.alertingRuleVersions = make(map[string]string)
@@ -206,10 +213,10 @@ func (l *Launcher) Run(stopCh <-chan struct{}) error {
 
 	// Build the command line for the child process:
 	childArgs := l.childArgs
-	if l.childConfig != "" {
+	if l.configFile != "" {
 		childArgs = append(
 			childArgs,
-			fmt.Sprintf("--config.file=%s", l.childConfig),
+			fmt.Sprintf("--config.file=%s", l.configFile),
 		)
 	}
 
@@ -283,31 +290,29 @@ func (l *Launcher) maybeReload() {
 
 	// Read the current YAML text from the flie, and check if there is any difference with the
 	// new one:
-	configDir := filepath.Dir(l.childConfig)
-	rulesFile := filepath.Join(configDir, "alerting.rules")
 	replaceFile := false
-	if _, err := os.Stat(rulesFile); err == nil {
-		oldYaml, err := ioutil.ReadFile(rulesFile)
+	if _, err := os.Stat(l.rulesFile); err == nil {
+		oldYaml, err := ioutil.ReadFile(l.rulesFile)
 		if err != nil {
-			runtime.HandleError(fmt.Errorf("Error reading alerting rules file '%s': %s", rulesFile, err.Error()))
+			runtime.HandleError(fmt.Errorf("Error reading alerting rules file '%s': %s", l.rulesFile, err.Error()))
 		}
 		if bytes.Equal(oldYaml, newYaml) {
 			glog.Infof(
 				"The alerting rules file '%s' doesn't need to be replaced",
-				rulesFile,
+				l.rulesFile,
 			)
 			replaceFile = false
 		} else {
 			glog.Infof(
 				"The alerting rules file '%s' needs to be replaced",
-				rulesFile,
+				l.rulesFile,
 			)
 			replaceFile = true
 		}
 	} else {
 		glog.Infof(
 			"The alerting rules file '%s' doesn't exist",
-			rulesFile,
+			l.rulesFile,
 		)
 		replaceFile = true
 	}
@@ -315,9 +320,9 @@ func (l *Launcher) maybeReload() {
 	// If there are differences, then replace the file and make sure tha the child process is
 	// running with the new configuration:
 	if replaceFile {
-		err = ioutil.WriteFile(rulesFile, newYaml, 0666)
+		err = ioutil.WriteFile(l.rulesFile, newYaml, 0666)
 		if err != nil {
-			runtime.HandleError(fmt.Errorf("Error writing alerting rules file '%s': %s", rulesFile, err.Error()))
+			runtime.HandleError(fmt.Errorf("Error writing alerting rules file '%s': %s", l.rulesFile, err.Error()))
 		}
 		if l.child != nil {
 			glog.Infof("Sending HUP signal to PID '%d'", l.child.Process.Pid)

@@ -16,11 +16,6 @@
 
 FROM centos:7
 
-# Create the monitoring user. The unusually high UID is needed because
-# recent versions of Kubernetes don't allow lower UID numbers.
-RUN \
-useradd -u 1000000000 -M monitoring
-
 # Install the alert manager binary:
 COPY alertmanager.tar.gz /tmp
 RUN \
@@ -34,12 +29,11 @@ rm -rf /tmp/*
 COPY alertmanager.yml /tmp
 RUN \
 cd tmp && \
-install -o monitoring -g monitoring -m u+rwx,g+rx,o+rx -d /etc/monitoring && \
-install -o monitoring -g monitoring -m u+rw,g+r,o+r alertmanager.yml /etc/monitoring && \
-install -o monitoring -m u+rwx,g+rx,o+rx -d /var/lib/monitoring && \
+install -o root -g root -m u+rwx,g+rx,o+rx -d /etc/monitoring && \
+install -o root -g root -m u+rw,g+r,o+r alertmanager.yml /etc/monitoring && \
 rm -rf /tmp/*
 
 EXPOSE 9093
-USER monitoring
+VOLUME /var/lib/monitoring
 WORKDIR /var/lib/monitoring
 CMD ["/usr/bin/alertmanager", "--config.file=/etc/monitoring/alertmanager.yml"]

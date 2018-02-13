@@ -16,11 +16,6 @@
 
 FROM centos:7
 
-# Create the monitoring user. The unusually high UID is needed because
-# recent versions of Kubernetes don't allow lower UID numbers.
-RUN \
-useradd -u 1000000000 -M monitoring
-
 # Install the Prometheus binary:
 COPY prometheus.tar.gz /tmp
 RUN \
@@ -34,9 +29,8 @@ rm -rf /tmp/*
 COPY prometheus.yml /tmp
 RUN \
 cd tmp && \
-install -o monitoring -g monitoring -m u+rwx,g+rx,o+rx -d /etc/monitoring && \
-install -o monitoring -g monitoring -m u+rw,g+r,o+r prometheus.yml /etc/monitoring && \
-install -o monitoring -g monitoring -m u+rwx,g+rx,o+rx -d /var/lib/monitoring && \
+install -o root -g root -m u+rwx,g+rx,o+rx -d /etc/monitoring && \
+install -o root -g root -m u+rw,g+r,o+r prometheus.yml /etc/monitoring && \
 rm -rf /tmp/*
 
 # Install the launcher binary:
@@ -47,6 +41,11 @@ install -o root -g root -m u+rwx,g+rx,o+rx prometheus-launcher /usr/bin && \
 rm -rf /tmp/*
 
 EXPOSE 9090
-USER monitoring
+VOLUME /var/lib/monitoring
 WORKDIR /var/lib/monitoring
-CMD ["/usr/bin/prometheus-launcher", "-alsologtostderr"]
+CMD [ \
+"/usr/bin/prometheus-launcher", \
+"-config-file=/etc/monitoring/prometheus.yml", \
+"-rules-file=/var/lib/monitoring/alerting.rules", \
+"-alsologtostderr" \
+]

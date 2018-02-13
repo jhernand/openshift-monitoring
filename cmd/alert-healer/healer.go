@@ -21,11 +21,11 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	monitoring "github.com/jhernand/openshift-monitoring/pkg/apis/monitoring/v1alpha1"
 	awx "github.com/jhernand/openshift-monitoring/pkg/awx"
@@ -341,7 +341,7 @@ func (h *Healer) launchAWXJob(connection *awx.Connection, template *awx.JobTempl
 	)
 }
 
-func (h* Healer) loadAWXSecret(namespace, name string) (username, password string, err error) {
+func (h *Healer) loadAWXSecret(namespace, name string) (username, password string, err error) {
 	var data []byte
 	var ok bool
 

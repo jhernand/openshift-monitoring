@@ -16,11 +16,6 @@
 
 FROM centos:7
 
-# Create the monitoring user. The unusually high UID is needed because
-# recent versions of Kubernetes don't allow lower UID numbers.
-RUN \
-useradd -u 1000000000 -M monitoring
-
 # Install the alert healer binary:
 COPY alert-healer /tmp
 RUN \
@@ -28,13 +23,7 @@ cd tmp && \
 install -o root -g root -m u+rwx,g+rx,o+rx alert-healer /usr/bin && \
 rm -rf /tmp/*
 
-# Install the alert healer configuration:
-RUN \
-cd tmp && \
-install -o monitoring -g monitoring -m u+rwx,g+rx,o+rx -d /var/lib/monitoring && \
-rm -rf /tmp/*
-
 EXPOSE 9093
-USER monitoring
+VOLUME /var/lib/monitoring
 WORKDIR /var/lib/monitoring
 CMD ["/usr/bin/alert-healer", "-alsologtostderr"]
