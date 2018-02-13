@@ -16,3 +16,19 @@ before_install:
 
 script:
 - make images
+
+after_success: |-
+  if [ "${TRAVIS_BRANCH}" == "master" ]; then
+    docker login -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}";
+    for image in $(ls images); do
+      src="openshift-monitoring/${image}:0.0.0";
+      dst="jhernand/${image}:0.0.0";
+      docker tag "${src}" "${dst}";
+      docker push "${dst}";
+    done
+  fi
+
+env:
+  global:
+  - secure: 1pNwZevX4c5XNiKT7KPD+oCX7rjvLGveHp+BRqCL+R3TxigfFhCoKbfuTuwkbILJ8iB/hr+OvXovQw6TxB10JW90SEHbufX8HukkwlfiYI1tH/YS6ImfPM8ByhqhM73lFq3yD1NzLcPnLrGnR2lTMWWIHbptVKO2JiC36Tgqmdrhn6Wzw0NeD7usNJfjCpNCUNgwh6UgSS8uXlj4EmYYZgxM1HB90QTM+Yb+ZkVS/sSWEFvt7qQFmcH0iCOfH8XRQz4/GkSNS9FwRyiZmJB17I7mKkKBYmsk7tlNmaYQb0DxPPDesaycHu101Et790ITKVpV6HDaTnlOwREWsz4dYoYT2+P6NLTCk23HN+Uom/aHTDja+8l2xnDRDY+QqwRgV4WDepL8Px3i/2cZwcX/rNsKfUM6INUathkwLTN5TRL3v0C6xemUk6rJf0+QSJrxtgOqq9Qw1luQDBBIgQxELfJXG7ndXy5Wz2Zi2ZkR/wWBsu4BJtHpOzypFbBMrZqg9JlnxmiiG+GPJJkENd8XVF0/06Z/sHKvbebaSLbgEE6389qkEJedssYfsThqKj0y4badD5m32XvBaW3vAzJQkZy6kN+wgVlpS20I0UJHdfvh1/Tj11WcEYHsNaglshlE7ry9C5TlD2Ntg07gFVkYgOzEcDv6e1+/oOa1TF5mRbg=
+  - secure: i8Q1yj75ON6HpN/TzKyLHU4MvrtXuniRKeKG5ARyI4c19UMwCrGQXNnP+c7zwaHFO7ou22k76l7b7yFx7mEyCR2e4ldD3O2CJfR8nk9m7wF/O5qbUUfGZkqFFFWBpifVRZtCepELi828mZkvZ5/FyKjHCrGSCHgWkE+ToE95Idk3jd4Lc3mwUZvgIFvUZ9tBptyDjoOAhkUhX8OlhTv8IgHWRSLSnmhBVn99II7yd2NwgkldwBTcBYQiOdxDkkoSso/vJC4pqJtX3nlWBnXnFiMzQz/8ht2aZwBnRgaTX+A0J5EjJCBIBi0xsh3qibrbXGvTWSG1Ly5w8qg/LUUsvXJ4wPmcBcrY2zvpx2c8HmGoYk3qkGPg7qA0oQmK0SxG4E2LgqByLRvHbtAqVv1b73nJDCbxKm4NUTamkoVLOwFgICNmB35QLMLnAYXX6F0anBcSGHNs9XI3qz949fVnUZTodlxEbxWaf35yKxKmSsAYRLFGfKYjY1yy16UcxBzjGQCbe+SBmsmVeaeQ34v8xxRHCXw5iKkNQZ0GbECWY4OW9NQJ4yGD45ErVuzqZkM1ijEPHxbVLYhTu+yfUWKOEfvb/OhPVtiVgNKSUH3eLHieOKodj7y2HZfIPWFxTNbn6lxUXPXLMVrIsyhPZtWmliV7zGjC17tLJJK7mKV70ws=
