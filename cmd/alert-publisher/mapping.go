@@ -17,9 +17,12 @@ limitations under the License.
 package main
 
 import (
+	"hash/fnv"
 	alertmanager "github.com/jhernand/openshift-monitoring/pkg/alertmanager"
 	monitoring "github.com/jhernand/openshift-monitoring/pkg/apis/monitoring/v1alpha1"
 	mapping "github.com/jhernand/openshift-monitoring/pkg/mapping"
+	"fmt"
+	"strconv"
 )
 
 func mapAlert(input *alertmanager.Alert) (output *monitoring.Alert, err error) {
@@ -28,11 +31,17 @@ func mapAlert(input *alertmanager.Alert) (output *monitoring.Alert, err error) {
 
 	// Map the basic data:
 	output.ObjectMeta.Namespace = input.Annotations["namespace"]
-	output.ObjectMeta.Name = input.Labels["alertname"]
+	output.ObjectMeta.Name = hashAlert(input.Labels["alertname"])
 
 	// Copy the labels and annotations:
 	mapping.CopyMap(input.Labels, &output.Status.Labels)
 	mapping.CopyMap(input.Annotations, &output.Status.Annotations)
 
 	return
+}
+
+func hashAlert(alertName string) (hashedAlert string) {
+	hash := uint64(fnv.New32a().Sum32())
+	hashedAlert = fmt.Sprintf("%s-%s",alertName,strconv.FormatUint(hash, 10))
+	return hashedAlert
 }
